@@ -1,0 +1,16 @@
+# venv
+clamaml/
+venv/
+.env/
+
+# python
+__pycache__/
+*.pyc
+
+# IDEs and OS
+.DS_Store
+.vscode/
+.~lock.*
+
+# lfs cache
+.git/lfs/
