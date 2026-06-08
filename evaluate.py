@@ -128,6 +128,9 @@ def build_env(env_name, room_size, num_dists, max_steps, missions,
     r_size = "env" if env_name in ["GoToObjDoor"] else room_size
     n_dists = "env" if env_name in ["OpenDoor","OpenDoorLoc","OpenDoorsOrder"] else num_dists
     
+    if r_size == "env" and env_name == "ConstrainedActionObjDoor":
+        r_size = args.room_size
+        
     dispatch = {
         "ConstrainedGoToLocal":     lambda: ConstrainedGoToLocalEnv(room_size=r_size, num_dists=n_dists, max_steps=max_steps),
         "ConstrainedPickupDist":    lambda: ConstrainedPickupDistEnv(room_size=r_size, num_dists=n_dists, max_steps=max_steps),
@@ -329,6 +332,8 @@ if env_name in ["ConstrainedGoToLocal", "ConstrainedPickupDist"]:
     configs = [(7, 3), (7, 5), (8, 2), (8, 4), (9, 3), (9, 5)]
 elif env_name == "ConstrainedGoToObjDoor":
     configs = [("env", 1), ("env", 2), ("env", 3), ("env", 4), ("env", 5)]
+elif env_name == "ConstrainedActionObjDoor":
+    configs = [("env", "env")]
 elif env_name in ["ConstrainedGoToOpen", "ConstrainedFindObjS5"]:
     configs = [(5, 2), (5, 3), (6, 2), (6, 4)]
 else:
