@@ -480,9 +480,15 @@ else:
         del wb["Sheet"]
 
 sheet_name = f"{env_name}_{nc}c"[:31]
+is_new_sheet = False
 if sheet_name in wb.sheetnames:
-    del wb[sheet_name]
-ws = wb.create_sheet(sheet_name)
+    ws = wb[sheet_name]
+    ws.append([])
+    ws.append([f"--- NEW RUN: C-LAMAML (dt={delta_theta}, dc={delta_c}) vs CRL vs Random ---"])
+    ws[ws.max_row][0].font = Font(bold=True)
+else:
+    ws = wb.create_sheet(sheet_name)
+    is_new_sheet = True
 
 # Header
 header = ["Room Size", "Num Distractor", "Max Steps", "Delta Theta",
@@ -493,7 +499,8 @@ if random_ready:
     header += ["Avg Steps Random", "Success Prob Random", "Avg Viols Random"]
 ws.append(header)
 
-for cell in ws[1]:
+# Bold the header row
+for cell in ws[ws.max_row]:
     cell.font = Font(bold=True)
 
 for row in excel_rows:

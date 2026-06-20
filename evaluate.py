@@ -209,7 +209,7 @@ if not args.skip_clamaml:
 # ── LoadLA-MAML ───────────────────────────────────────────────────────
 unified_ready = False
 if not args.skip_unified:
-    _ckpt_path = f"unified_model/lang_{env_name}_{delta_theta}_{args.num_constraints}c.pth"
+    _ckpt_path = f"unified_model/lang_{env_name}_dt{delta_theta}_{args.num_constraints}c.pth"
     if os.path.exists(_ckpt_path):
         ckpt_u = torch.load(_ckpt_path, map_location=device)
         policy_u = _make_policy(); policy_u.load_state_dict(ckpt_u["policy"]); policy_u.eval()

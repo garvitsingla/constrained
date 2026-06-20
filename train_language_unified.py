@@ -75,8 +75,8 @@ p.add_argument("--env", dest="env_name",
 p.add_argument("--room-size", type=int, default=8)
 p.add_argument("--num-dists", type=int, default=2)
 p.add_argument("--max-steps", type=int, default=300)
-p.add_argument("--delta-theta", type=float, default=0.3)
-p.add_argument("--delta-constraint", type=float, default=0.1)
+p.add_argument("--delta-theta", type=float, default=0.5)
+p.add_argument("--delta-constraint", type=float, default=0.3)
 p.add_argument("--meta-iters", type=int, default=200)
 p.add_argument("--batch-size", type=int, default=40, help="episodes per meta-batch (per task)")
 p.add_argument("--num-workers", type=int, default=4)
@@ -345,7 +345,7 @@ def main():
         "mission_encoder": mission_encoder.state_dict(),
         "mission_adapter": mission_adapter.state_dict(),
     }
-    torch.save(save_dict, f"unified_model/lang_{env_name}_{delta_theta}_{args.num_constraints}c.pth")
+    torch.save(save_dict, f"unified_model/lang_{env_name}_dt{delta_theta}_{args.num_constraints}c.pth")
 
     # Plotting
     env_dir = os.path.join("metrics", f"{env_name}_{args.num_constraints}c")
