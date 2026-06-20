@@ -191,7 +191,7 @@ policy_param_shapes = [p.shape for p in _make_policy().parameters()]
 # ── Load C-LAMAML ─────────────────────────────────────────────────────────────
 clamaml_ready = False
 if not args.skip_clamaml:
-    _ckpt_path = f"lang_model/lang_{env_name}_{delta_theta}_{args.num_constraints}c.pth"
+    _ckpt_path = f"lang_model/lang_{env_name}_dt{delta_theta}_dc{delta_c}_{args.num_constraints}c.pth"
     if os.path.exists(_ckpt_path):
         ckpt_c = torch.load(_ckpt_path, map_location=device)
         policy_c = _make_policy(); policy_c.load_state_dict(ckpt_c["policy"]); policy_c.eval()

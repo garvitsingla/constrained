@@ -14,3 +14,10 @@ __pycache__/
 
 # lfs cache
 .git/lfs/
+
+# Large models and data
+*.pth
+*.npy
+lang_model/
+crl_model/
+metrics/

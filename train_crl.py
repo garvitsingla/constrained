@@ -16,12 +16,9 @@ import matplotlib.pyplot as plt
 import random
 from maml_rl.baseline import LinearFeatureBaseline
 from maml_rl.policies.categorical_mlp import CategoricalMLPPolicy
-from maml_rl.metalearners.lang_trpo import MAMLTRPO
+from maml_rl.metalearners.crl_trpo import CRLTRPO
 import sampler_lang as S
 from sampler_lang import (BabyAIMissionTaskWrapper,
-                        SentenceMissionEncoder,
-                        MissionParamAdapter,
-                        ConstraintParamAdapter,
                         MultiTaskSampler,
                         preprocess_obs)
 from environment import (LOCAL_MISSIONS,
@@ -75,8 +72,6 @@ p.add_argument("--env", dest="env_name",
 p.add_argument("--room-size", type=int, default=8)
 p.add_argument("--num-dists", type=int, default=2)
 p.add_argument("--max-steps", type=int, default=300)
-p.add_argument("--delta-theta", type=float, default=0.3)
-p.add_argument("--delta-constraint", type=float, default=0.1)
 p.add_argument("--meta-iters", type=int, default=200)
 p.add_argument("--batch-size", type=int, default=40, help="episodes per meta-batch (per task)")
 p.add_argument("--num-workers", type=int, default=4)
@@ -185,8 +180,6 @@ def main():
     room_size = args.room_size
     num_dists = args.num_dists
     max_steps = args.max_steps
-    delta_theta = args.delta_theta
-    delta_constraint = args.delta_constraint
     num_workers = args.num_workers
     num_batches = args.meta_iters
     batch_size = args.batch_size
@@ -224,22 +217,14 @@ def main():
     )
 
     env = make_env()
-    print("[Constrained LA-MAML]\n" f"Using environment: {env_name}\n"
-        f"room_size: {room_size}  num_dists: {num_dists}  max_steps: {max_steps}\n"
-        f"delta_theta: {delta_theta}")
+    print("[Constrained RL Baseline (No Language, No Meta-Learning)]\n"
+          f"Using environment: {env_name}\n"
+          f"room_size: {room_size}  num_dists: {num_dists}  max_steps: {max_steps}\n"
+          f"Note: Global policy used directly for ALL tasks — no task-specific adaptation.")
 
     # Policy setup 
     hidden_sizes = (64, 64)
     nonlinearity = torch.nn.functional.tanh
-
-    mission_encoder = SentenceMissionEncoder(
-        model_name="all-MiniLM-L6-v2",
-        frozen=True,          
-        normalize=True,         
-        cache=True,           
-        device=device
-    )
-    mission_encoder_output_dim = mission_encoder.output_dim
 
     # Policy Parameters shape
     obs, _ = env.reset()
@@ -257,12 +242,6 @@ def main():
     baseline = LinearFeatureBaseline(input_size).to(device)
     cost_baseline = LinearFeatureBaseline(input_size).to(device)
 
-    policy_param_shapes = [p.shape for p in policy.parameters()]
-
-    mission_adapter = MissionParamAdapter(mission_encoder_output_dim, policy_param_shapes).to(device)
-    constraint_adapter = ConstraintParamAdapter(mission_encoder_output_dim, policy_param_shapes).to(device)
-
-    
     sampler = MultiTaskSampler(
         env=env,
         env_fn=make_env,
@@ -274,13 +253,8 @@ def main():
         num_workers=num_workers
     )
 
-    meta_learner = MAMLTRPO(
+    crl_learner = CRLTRPO(
         policy=policy,
-        mission_encoder=mission_encoder,
-        mission_adapter=mission_adapter,
-        constraint_adapter=constraint_adapter,
-        delta_theta=delta_theta,
-        delta_constraint=delta_constraint,
         fast_lr=1e-4,
         first_order=True,
         device=device,
@@ -305,7 +279,7 @@ def main():
         print(f"\nBatch {batch + 1}/{num_batches}")
         valid_episodes, step_counts = sampler.sample(
             meta_batch_size,
-            meta_learner,
+            crl_learner,
             gamma=0.99,
             gae_lambda=1.0,
             device=device
@@ -316,7 +290,7 @@ def main():
         avg_steps_per_batch.append(avg_steps_per_episode)
         std_steps = np.std([s / sampler.batch_size for s in step_counts]) if len(step_counts) > 0 else 0.0
         std_steps_per_batch.append(std_steps)
-        print(f"Average steps in Meta-batch {batch+1}: {avg_steps_per_episode}")
+        print(f"Average steps in Batch {batch+1}: {avg_steps_per_episode}")
 
         total_cost = 0
         count = 0
@@ -337,9 +311,9 @@ def main():
         std_cost = float(np.std(all_costs)) if len(all_costs) > 0 else 0.0
         avg_costs_per_batch.append(avg_cost)
         std_costs_per_batch.append(std_cost)
-        print(f"Average cost in Meta-batch {batch+1}: {avg_cost:.4f}")
+        print(f"Average cost in Batch {batch+1}: {avg_cost:.4f}")
 
-        meta_learner.step(valid_episodes,valid_episodes)
+        crl_learner.step(valid_episodes, valid_episodes)
 
         gc.collect()
         if torch.cuda.is_available():
@@ -353,40 +327,37 @@ def main():
     print(f"Total training time: {training_time:.2f} seconds")
     print(f"Average time per iteration: {time_per_iteration:.2f} seconds")
 
-    # Save the trained meta-policy parameters
-    os.makedirs("lang_model", exist_ok=True)
+    # Save the trained policy parameters
+    os.makedirs("crl_model", exist_ok=True)
     save_dict = {
         "policy": policy.state_dict(),
-        "mission_encoder": mission_encoder.state_dict(),
-        "mission_adapter": mission_adapter.state_dict(),
-        "constraint_adapter": constraint_adapter.state_dict(),
     }
-    torch.save(save_dict, f"lang_model/lang_{env_name}_dt{delta_theta}_dc{delta_constraint}_{args.num_constraints}c.pth")
+    torch.save(save_dict, f"crl_model/crl_{env_name}_{args.num_constraints}c.pth")
 
 
     # plot
     env_dir = os.path.join("metrics", f"{env_name}_{args.num_constraints}c")
     os.makedirs(env_dir, exist_ok=True) 
 
-    np.save(os.path.join(env_dir, f"c_lamaml_avg_steps_{delta_theta}.npy"), np.array(avg_steps_per_batch))
-    np.save(os.path.join(env_dir, f"c_lamaml_std_steps_{delta_theta}.npy"), np.array(std_steps_per_batch))
-    np.save(os.path.join(env_dir, f"c_lamaml_avg_costs_{delta_theta}.npy"), np.array(avg_costs_per_batch))
-    np.save(os.path.join(env_dir, f"c_lamaml_std_costs_{delta_theta}.npy"), np.array(std_costs_per_batch))
-    with open(os.path.join(env_dir, f"c_lamaml_meta_{delta_theta}.json"), "w") as f:
-        json.dump({"label" : "C-LAMAML", "env" : env_name}, f)
+    np.save(os.path.join(env_dir, f"crl_avg_steps.npy"), np.array(avg_steps_per_batch))
+    np.save(os.path.join(env_dir, f"crl_std_steps.npy"), np.array(std_steps_per_batch))
+    np.save(os.path.join(env_dir, f"crl_avg_costs.npy"), np.array(avg_costs_per_batch))
+    np.save(os.path.join(env_dir, f"crl_std_costs.npy"), np.array(std_costs_per_batch))
+    with open(os.path.join(env_dir, f"crl_meta.json"), "w") as f:
+        json.dump({"label" : "Constrained RL", "env" : env_name}, f)
     
     plt.plot(avg_steps_per_batch)
-    plt.xlabel("Meta-batch")
+    plt.xlabel("Batch")
     plt.ylabel("Average steps per episode")
-    plt.title(f"[C-LAMAML] {env_name} delta_theta={delta_theta} ({args.num_constraints}c)")
-    plt.savefig(os.path.join(env_dir, f"C_LaMaml_plot_{delta_theta}_{args.num_constraints}c.png"))
+    plt.title(f"[Constrained RL] {env_name} ({args.num_constraints}c)")
+    plt.savefig(os.path.join(env_dir, f"crl_plot_{args.num_constraints}c.png"))
     plt.close()
 
     plt.plot(avg_costs_per_batch)
-    plt.xlabel("Meta-batch")
+    plt.xlabel("Batch")
     plt.ylabel("Average cost per episode")
-    plt.title(f"[C-LAMAML] {env_name} cost delta_theta={delta_theta} ({args.num_constraints}c)")
-    plt.savefig(os.path.join(env_dir, f"C_LaMaml_cost_plot_{delta_theta}_{args.num_constraints}c.png"))
+    plt.title(f"[Constrained RL] {env_name} cost ({args.num_constraints}c)")
+    plt.savefig(os.path.join(env_dir, f"crl_cost_plot_{args.num_constraints}c.png"))
     plt.close()
 
 if __name__ == "__main__":
