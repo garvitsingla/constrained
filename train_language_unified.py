@@ -76,7 +76,7 @@ p.add_argument("--room-size", type=int, default=8)
 p.add_argument("--num-dists", type=int, default=2)
 p.add_argument("--max-steps", type=int, default=300)
 p.add_argument("--delta-theta", type=float, default=0.5)
-p.add_argument("--delta-constraint", type=float, default=0.3)
+p.add_argument("--delta-constraint", type=float, default=0.5)
 p.add_argument("--meta-iters", type=int, default=200)
 p.add_argument("--batch-size", type=int, default=40, help="episodes per meta-batch (per task)")
 p.add_argument("--num-workers", type=int, default=4)
@@ -183,6 +183,7 @@ def main():
     num_dists    = args.num_dists
     max_steps    = args.max_steps
     delta_theta  = args.delta_theta
+    delta_constraint = args.delta_constraint
     num_workers  = args.num_workers
     num_batches  = args.meta_iters
     batch_size   = args.batch_size
@@ -221,7 +222,7 @@ def main():
     env = make_env()
     print("[Unified LA-MAML]\n" f"Using environment: {env_name}\n"
         f"room_size: {room_size}  num_dists: {num_dists}  max_steps: {max_steps}\n"
-        f"delta_theta: {delta_theta}")
+        f"delta_theta: {delta_theta}, delta_constraint: {delta_constraint}")
 
     # Policy setup 
     hidden_sizes  = (64, 64)
