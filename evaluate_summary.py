@@ -323,10 +323,11 @@ def file_lock(lock_path, timeout=60):
         except OSError:
             pass
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Delta values to loop through
-# ─────────────────────────────────────────────────────────────────────────────
-DELTA_PAIRS = [(0.3, 0.1), (0.5, 0.3), (0.7, 0.5), (0.5, 0.5), (1.0, 1.0)]
+DELTA_PAIRS = [
+    (0.3, 0.1), (0.5, 0.3), (0.5, 0.5),
+    (0.7, 0.3), (0.7, 0.5), (0.7, 0.7),
+    (0.9, 0.3), (0.9, 0.5), (1.0, 1.0)
+]
 
 configs    = get_configs(env_name)
 test_tasks = random.sample(all_missions, min(n_missions, len(all_missions)))
