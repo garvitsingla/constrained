@@ -324,9 +324,9 @@ def file_lock(lock_path, timeout=60):
             pass
 
 DELTA_PAIRS = [
-    (0.3, 0.1), (0.5, 0.3), (0.5, 0.5),
-    (0.7, 0.3), (0.7, 0.5), (0.7, 0.7),
-    (0.9, 0.3), (0.9, 0.5), (1.0, 1.0)
+    # (0.3, 0.1), (0.5, 0.3), (0.5, 0.5),
+    # (0.7, 0.3), (0.7, 0.5), (0.7, 0.7),(0.9, 0.3), (0.9, 0.5),
+     (1.0, 1.0)
 ]
 
 configs    = get_configs(env_name)
@@ -357,6 +357,15 @@ for dt, dc in DELTA_PAIRS:
     dc_str = fmt_dt_dc(dc)
     clamaml_ckpt = f"lang_model/lang_{env_name}_dt{dt_str}_dc{dc_str}_{nc}c.pth"
     
+    if not os.path.exists(clamaml_ckpt):
+        # Try alternate float formatting (e.g., dt1.0_dc1.0)
+        clamaml_ckpt_alt1 = f"lang_model/lang_{env_name}_dt{dt}_dc{dc}_{nc}c.pth"
+        clamaml_ckpt_alt2 = f"lang_model/lang_{env_name}_dt{dt:.1f}_dc{dc:.1f}_{nc}c.pth"
+        if os.path.exists(clamaml_ckpt_alt1):
+            clamaml_ckpt = clamaml_ckpt_alt1
+        elif os.path.exists(clamaml_ckpt_alt2):
+            clamaml_ckpt = clamaml_ckpt_alt2
+
     if not os.path.exists(clamaml_ckpt):
         print(f"[!] Checkpoint not found for dt={dt}, dc={dc}: {clamaml_ckpt} (Skipping)")
         continue

@@ -277,6 +277,14 @@ policy_param_shapes = [p.shape for p in make_policy().parameters()]
 # 1. Load C-LAMAML
 # ─────────────────────────────────────────────────────────────────────────────
 clamaml_ckpt = f"lang_model/lang_{env_name}_dt{delta_theta}_dc{delta_c}_{nc}c.pth"
+if not os.path.exists(clamaml_ckpt):
+    # Try alternate integer representation (e.g. dt1_dc1 instead of dt1.0_dc1.0)
+    dt_str = str(int(delta_theta)) if delta_theta == int(delta_theta) else str(delta_theta)
+    dc_str = str(int(delta_c)) if delta_c == int(delta_c) else str(delta_c)
+    clamaml_ckpt_alt = f"lang_model/lang_{env_name}_dt{dt_str}_dc{dc_str}_{nc}c.pth"
+    if os.path.exists(clamaml_ckpt_alt):
+        clamaml_ckpt = clamaml_ckpt_alt
+
 if os.path.exists(clamaml_ckpt):
     ckpt = torch.load(clamaml_ckpt, map_location=device)
     policy_clamaml = make_policy()
