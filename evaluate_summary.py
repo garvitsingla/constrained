@@ -50,7 +50,7 @@ p.add_argument("--delta-theta", type=float, default=0.3)
 p.add_argument("--delta-constraint", type=float, default=0.1)
 p.add_argument("--n-missions", type=int, default=10)
 p.add_argument("--n-episodes", type=int, default=10)
-p.add_argument("--num-constraints", type=int, default=1)
+p.add_argument("--num-constraints", type=int, default=2)
 p.add_argument("--skip-random", action="store_true")
 args = p.parse_args()
 
